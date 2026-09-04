@@ -1,0 +1,113 @@
+--- a/api/db/db_models.py
++++ b/api/db/db_models.py
+@@ -851,6 +851,12 @@
+     is_provisioned = BooleanField(default=False, index=True, help_text="1 if plan provisioned in tenant table")
+     provisioned_at = DateTimeField(null=True, help_text="Timestamp when tenant was provisioned")
+     audit_note = TextField(null=True, help_text="Admin audit / reconciliation note")
++    session_id = CharField(max_length=64, null=True, index=True, help_text="Anonymous session ID for attribution")
++    utm_source = CharField(max_length=64, null=True, help_text="Marketing UTM source (e.g. meta, instagram)")
++    utm_medium = CharField(max_length=64, null=True, help_text="Marketing UTM medium (e.g. cpc, story_ad)")
++    utm_campaign = CharField(max_length=128, null=True, index=True, help_text="Marketing UTM campaign")
++    utm_content = CharField(max_length=128, null=True, help_text="Marketing UTM content/creative ID")
++    utm_term = CharField(max_length=128, null=True, help_text="Marketing UTM term/keyword")
+ 
+     class Meta:
+         db_table = "payment_transaction"
+--- a/api/db/services/payment_transaction_service.py
++++ b/api/db/services/payment_transaction_service.py
+@@ -86,6 +86,12 @@
+         duration_months: int = 1,
+         expected_amount_uzs: int = None,
+         payment_method: str = "atmos_uzcard_humo",
++        session_id: str = None,
++        utm_source: str = None,
++        utm_medium: str = None,
++        utm_campaign: str = None,
++        utm_content: str = None,
++        utm_term: str = None,
+     ):
+         """Idempotently create or retrieve an initiated PENDING transaction record.
+ 
+@@ -116,6 +122,12 @@
+             "payment_method": str(payment_method or "atmos_uzcard_humo"),
+             "is_provisioned": False,
+             "provisioned_at": None,
++            "session_id": session_id,
++            "utm_source": utm_source,
++            "utm_medium": utm_medium,
++            "utm_campaign": utm_campaign,
++            "utm_content": utm_content,
++            "utm_term": utm_term,
+             "create_time": current_timestamp(),
+             "create_date": datetime_format(datetime.now()),
+             "update_time": current_timestamp(),
+--- a/api/apps/restful_apis/system_api.py
++++ b/api/apps/restful_apis/system_api.py
+@@ -19,6 +19,7 @@
+ import os
+ import base64
+ import httpx
++import re
+ from datetime import datetime, timedelta
+ from timeit import default_timer as timer
+ 
+@@ -682,6 +683,16 @@
+     months = max(1, int(req.get("months", 1)))
+     payment_method = str(req.get("payment_method", "atmos_uzcard_humo")).strip()
+ 
++    # Track 3: Route-level attribution metadata sanitization (OUTSIDE DB transactions)
++    raw_session_id = req.get("session_id")
++    raw_utm = req.get("utm") or {}
++    clean_session_id = re.sub(r'[^a-zA-Z0-9_\-]', '', str(raw_session_id))[:64] if raw_session_id else None
++    clean_utm_source = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_source', '')))[:64] or None
++    clean_utm_medium = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_medium', '')))[:64] or None
++    clean_utm_campaign = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_campaign', '')))[:128] or None
++    clean_utm_content = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_content', '')))[:128] or None
++    clean_utm_term = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_term', '')))[:128] or None
++
+     if not transaction_id or not email:
+         return get_data_error_result(message="transaction_id and email are required")
+ 
+@@ -702,6 +713,12 @@
+         duration_months=months,
+         expected_amount_uzs=expected_amount,
+         payment_method=payment_method,
++        session_id=clean_session_id,
++        utm_source=clean_utm_source,
++        utm_medium=clean_utm_medium,
++        utm_campaign=clean_utm_campaign,
++        utm_content=clean_utm_content,
++        utm_term=clean_utm_term,
+     )
+ 
+     return get_json_result(data={"success": True, "created": is_created, "transaction": tx.to_dict()})
+@@ -725,6 +742,16 @@
+     email = str(req.get("email", "")).strip().lower()
+     plan = str(req.get("plan", "plus")).strip().lower()
+     months = max(1, int(req.get("months", 1)))
++
++    # Track 3: Route-level attribution metadata sanitization (OUTSIDE DB lock)
++    raw_session_id = req.get("session_id")
++    raw_utm = req.get("utm") or {}
++    clean_session_id = re.sub(r'[^a-zA-Z0-9_\-]', '', str(raw_session_id))[:64] if raw_session_id else None
++    clean_utm_source = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_source', '')))[:64] or None
++    clean_utm_medium = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_medium', '')))[:64] or None
++    clean_utm_campaign = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_campaign', '')))[:128] or None
++    clean_utm_content = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_content', '')))[:128] or None
++    clean_utm_term = re.sub(r'[^a-zA-Z0-9_\-\.]', '', str(raw_utm.get('utm_term', '')))[:128] or None
+ 
+     if not transaction_id or not email:
+         return get_data_error_result(message="transaction_id and email are required")
+@@ -776,6 +803,12 @@
+                     account_email=email,
+                     plan_type=plan,
+                     duration_months=months,
++                    session_id=clean_session_id,
++                    utm_source=clean_utm_source,
++                    utm_medium=clean_utm_medium,
++                    utm_campaign=clean_utm_campaign,
++                    utm_content=clean_utm_content,
++                    utm_term=clean_utm_term,
+                 )
+ 
+             # 2. Python independently verifies transaction status & amount against Atmos

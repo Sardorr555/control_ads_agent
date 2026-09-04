@@ -10,15 +10,15 @@
 ## 1. Структура атомарных задач по блокам
 
 ### Блок 1: Окружение, Pydantic DTO и локальное хранилище с ранним Purge (Risk Order: 1)
-- [ ] **TASK-1.1:** Настроить конфигурацию проекта: `.gitignore`, `.env.example`, `requirements.txt` (изоляция секретов, зависимости: `flask`, `gunicorn`, `pydantic>=2.0`, `typer`, `tabulate`, `pytest`, `freezegun`).
-- [ ] **TASK-1.2:** Разработать строгие Pydantic DTO-модели (`src/models/events.py`, `src/models/attribution.py`, `src/models/reports.py`):
+- [x] **TASK-1.1:** Настроить конфигурацию проекта: `.gitignore`, `.env.example`, `requirements.txt` (изоляция секретов, зависимости: `flask`, `gunicorn`, `pydantic>=2.0`, `typer`, `tabulate`, `pytest`, `freezegun`).
+- [x] **TASK-1.2:** Разработать строгие Pydantic DTO-модели (`src/models/events.py`, `src/models/attribution.py`, `src/models/reports.py`):
   * `RawEventDTO`: `session_id`, `event_type`, `page_url`, `page_path`, `active_time_seconds`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `referrer`.
   * `PaymentAttributionDTO`: `payment_id`, `transaction_id`, `amount_uzs`, `status`, `session_id`, `utm_*`, `masked_payer_hash`.
   * `RoasReportDTO`, `CplReportDTO`, `ChannelSummaryDTO` с финансовыми полями в типе `Decimal`.
-- [ ] **TASK-1.3:** Разработать DDL локальной БД SQLite `migrations/V1.7__create_attribution_events.sql` (таблицы `attribution_raw_events` и `daily_attribution_summary` с индексами по `session_id`, `created_at`, `utm_campaign`).
-- [ ] **TASK-1.4:** Реализовать `SqliteEventsRepository` (`src/storage/sqlite_events_repo.py`) с поддержкой режима WAL, пулом соединений и пакетной вставкой событий.
-- [ ] **TASK-1.5:** Реализовать ранний механизм очистки логов (`src/core/retention_guard.py`): метод `purge_expired_raw_events(retention_days=30)` для предотвращения разрастания SQLite с первого дня сбора данных.
-- [ ] **TASK-1.6:** Написать Unit-тест `tests/test_retention_purge.py` (с фикстурой `freezegun`: проверка удаления записей возрастом 35 дней и сохранения записей младше 30 дней).
+- [x] **TASK-1.3:** Разработать DDL локальной БД SQLite `migrations/V1.7__create_attribution_events.sql` (таблицы `attribution_raw_events` и `daily_attribution_summary` с индексами по `session_id`, `created_at`, `utm_campaign`).
+- [x] **TASK-1.4:** Реализовать `SqliteEventsRepository` (`src/storage/sqlite_events_repo.py`) с поддержкой режима WAL, пулом соединений и пакетной вставкой событий.
+- [x] **TASK-1.5:** Реализовать ранний механизм очистки логов (`src/core/retention_guard.py`): метод `purge_expired_raw_events(retention_days=30)` для предотвращения разрастания SQLite с первого дня сбора данных.
+- [x] **TASK-1.6:** Написать Unit-тест `tests/test_retention_purge.py` (с фикстурой `freezegun`: проверка удаления записей возрастом 35 дней и сохранения записей младше 30 дней).
   * *Критерий верификации:* `pytest tests/test_retention_purge.py -v` (зелёный).
 
 ### 🛑 КОНТРОЛЬНАЯ ТОЧКА А (Checkpoint A — Storage & Purge Ready):
@@ -29,25 +29,25 @@
 ### Блок 2: Аддитивная миграция БД и Zero-Trust проброс в `system_api.py` (Критический блок платёжного ядра — Risk Order: 2)
 > ⚠️ **ВНИМАНИЕ:** Единственный блок трека, затрагивающий боевое платёжное ядро. Выделен в изолированную задачу со строгой верификацией инвариантов.
 
-- [ ] **TASK-2.1:** Подготовить файл аддитивной SQL-миграции `migrations/V1.5__add_attribution_utm_columns.sql`:
+- [x] **TASK-2.1:** Подготовить файл аддитивной SQL-миграции `migrations/V1.5__add_attribution_utm_columns.sql`:
   * Добавление полей `session_id VARCHAR(64) NULL`, `utm_source VARCHAR(64) NULL`, `utm_medium VARCHAR(64) NULL`, `utm_campaign VARCHAR(128) NULL`, `utm_content VARCHAR(128) NULL`, `utm_term VARCHAR(128) NULL` в таблицу `payment_transaction`.
   * Добавление индексов `idx_pt_session_id` и `idx_pt_utm_campaign`.
-- [ ] **TASK-2.2:** Подготовить DDL безопасного представления `migrations/V1.6__create_v_attribution_payments.sql`:
+- [x] **TASK-2.2:** Подготовить DDL безопасного представления `migrations/V1.6__create_v_attribution_payments.sql`:
   * `CREATE OR REPLACE VIEW v_attribution_payments` со строгим фильтром `WHERE pt.status = 'PAID'`.
   * Плейсхолдер соли `{{PAYER_HASH_SALT}}` для генерации `masked_payer_hash`.
   * Исключение полей `gateway_response`, `account_email`, данных карт и системных заметок.
-- [ ] **TASK-2.3:** Написать Unit-тест прав доступа `tests/test_view_readonly_isolation.py`:
+- [x] **TASK-2.3:** Написать Unit-тест прав доступа `tests/test_view_readonly_isolation.py`:
   * Проверка `SELECT * FROM v_attribution_payments` под юзером `analytics_ro` (успешно).
   * Попытка `SELECT gateway_response FROM payment_transaction` $\rightarrow$ проверка ошибки `ERROR 1142: SELECT command denied`.
   * Попытка любого `INSERT/UPDATE/DELETE` $\rightarrow$ проверка отказа в доступе.
-- [ ] **TASK-2.4:** Подготовить минимальный diff для роута `/api/pay/apply` в `system_api.py`:
+- [x] **TASK-2.4:** Подготовить минимальный diff для роута `/api/pay/apply` в `system_api.py`:
   * Извлечение `session_id` и `utm` из входящего `request.json`.
   * Строгая regex-очистка и обрезка длины строк **ДО входа в критическую секцию**.
-- [ ] **TASK-2.5:** Подготовить минимальный diff для `PaymentTransactionService.create_pending()`:
+- [x] **TASK-2.5:** Подготовить минимальный diff для `PaymentTransactionService.create_pending()`:
   * Добавление опциональных аргументов `session_id=None`, `utm_source=None` и т.д.
   * Чистый passthrough в параметры SQL `INSERT` без дополнительной валидации внутри метода.
   * Полное сохранение нетронутыми проверки `if not existing_tx:` и удержания `GET_LOCK`.
-- [ ] **TASK-2.6:** Написать интеграционный тест `tests/test_payment_flow_zero_impact.py`:
+- [x] **TASK-2.6:** Написать интеграционный тест `tests/test_payment_flow_zero_impact.py`:
   * Создание платежа с переданными UTM-параметрами $\rightarrow$ поля записаны в БД, платёж в статусе `PENDING`.
   * Создание платежа без UTM $\rightarrow$ поля записаны как `NULL`, платёж в статусе `PENDING`.
   * Проверка: расчёт сумм (`expected_amount_uzs`), генерация подписи Atmos и время удержания `GET_LOCK` не изменились.
