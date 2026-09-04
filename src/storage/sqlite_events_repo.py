@@ -158,3 +158,67 @@ class SQLiteEventsRepo:
         with self.get_connection() as conn:
             cursor = conn.execute(query, (ip_hash, since.isoformat(), limit))
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_last_touch_by_session(self, session_id: str, before_time: Optional[datetime] = None) -> Optional[dict]:
+        if before_time:
+            query = """
+            SELECT id, session_id, timestamp, page_path, time_on_page_sec,
+                   utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+                   referrer, ip_hash, country, city, user_agent, event_type
+            FROM attribution_raw_events
+            WHERE session_id = ? AND timestamp <= ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """
+            params = (session_id, before_time.isoformat())
+        else:
+            query = """
+            SELECT id, session_id, timestamp, page_path, time_on_page_sec,
+                   utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+                   referrer, ip_hash, country, city, user_agent, event_type
+            FROM attribution_raw_events
+            WHERE session_id = ?
+            ORDER BY timestamp DESC
+            LIMIT 1
+            """
+            params = (session_id,)
+        with self.get_connection() as conn:
+            cursor = conn.execute(query, params)
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def get_touch_by_ip_hash(
+        self,
+        ip_hash: str,
+        since: datetime,
+        before_time: Optional[datetime] = None,
+        model: str = "last-touch"
+    ) -> Optional[dict]:
+        order = "ASC" if model == "first-touch" else "DESC"
+        if before_time:
+            query = f"""
+            SELECT id, session_id, timestamp, page_path, time_on_page_sec,
+                   utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+                   referrer, ip_hash, country, city, user_agent, event_type
+            FROM attribution_raw_events
+            WHERE ip_hash = ? AND timestamp >= ? AND timestamp <= ?
+            ORDER BY timestamp {order}
+            LIMIT 1
+            """
+            params = (ip_hash, since.isoformat(), before_time.isoformat())
+        else:
+            query = f"""
+            SELECT id, session_id, timestamp, page_path, time_on_page_sec,
+                   utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+                   referrer, ip_hash, country, city, user_agent, event_type
+            FROM attribution_raw_events
+            WHERE ip_hash = ? AND timestamp >= ?
+            ORDER BY timestamp {order}
+            LIMIT 1
+            """
+            params = (ip_hash, since.isoformat())
+        with self.get_connection() as conn:
+            cursor = conn.execute(query, params)
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
