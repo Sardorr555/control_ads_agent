@@ -59,19 +59,19 @@
 ---
 
 ### Блок 3: Frontend JS-трекер и Анонимизация IP (Risk Order: 3)
-- [ ] **TASK-3.1:** Разработать компактный клиентский скрипт `web/public/swipies-tracker.js`:
+- [x] **TASK-3.1:** Разработать компактный клиентский скрипт `web/public/swipies-tracker.js`:
   * Размер < 3.5 КБ gzip, vanilla JS (zero dependencies).
   * Парсинг query-параметров URL (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `fbclid`).
   * Сохранение в `sessionStorage` (текущая сессия) и cookie `_swp_utm` (First-Touch, срок 30 дней).
   * Подсчёт реального активного времени через `document.visibilityState === 'visible'` (фоновые вкладки на паузе).
   * Отправка событий `page_view`, `heartbeat` (каждые 30 сек) и финального сброса через `navigator.sendBeacon`.
   * Fallback при блокировке cookies/инкогнито: сохранение в in-memory state без ошибок в консоли браузера.
-- [ ] **TASK-3.2:** Реализовать модуль анонимизации данных `src/core/anonymizer.py`:
+- [x] **TASK-3.2:** Реализовать модуль анонимизации данных `src/core/anonymizer.py`:
   * Извлечение левого публичного IP из заголовка `X-Forwarded-For` с валидацией regex.
   * Вычисление `SHA256(IP + Daily_Salt)` с суточной ротацией соли в 00:00 UTC.
   * Локальный GeoIP резолвер (определение `country="UZ"`, `city="Tashkent"`).
   * Гарантированное удаление сырого IP из памяти без сохранения в лог или БД.
-- [ ] **TASK-3.3:** Написать Unit-тесты `tests/test_tracker_js_contract.py` и `tests/test_anonymizer_ip.py`:
+- [x] **TASK-3.3:** Написать Unit-тесты `tests/test_tracker_js_contract.py` и `tests/test_anonymizer_ip.py`:
   * Проверка JSON-контракта полезной нагрузки трекера.
   * Проверка необратимости хэширования IP (невозможность восстановить исходный адрес).
   * Проверка корректной ротации соли в полночь без коллизий.
