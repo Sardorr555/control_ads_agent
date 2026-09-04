@@ -80,18 +80,18 @@
 ---
 
 ### Блок 4: Изолированный Ingestion Service (Flask на порту 5001) и Nginx (Risk Order: 4)
-- [ ] **TASK-4.1:** Разработать независимый Flask-сервис `src/tracker_service.py`:
+- [x] **TASK-4.1:** Разработать независимый Flask-сервис `src/tracker_service.py`:
   * Роут `POST /api/v1/track/event` (приём батчей событий, валидация через `RawEventDTO`).
   * Анонимизация IP на лету и сохранение в `SqliteEventsRepository`.
   * Роут `GET /health` для мониторинга доступности.
-- [ ] **TASK-4.2:** Подготовить конфигурационный файл Nginx `deploy/nginx_attribution.conf`:
+- [x] **TASK-4.2:** Подготовить конфигурационный файл Nginx `deploy/nginx_attribution.conf`:
   * Определение зоны rate-limiting `limit_req_zone $binary_remote_addr zone=track_limit:10m rate=30r/s;`.
   * Блок `location /api/v1/track/` с проксированием на `127.0.0.1:5001`, `burst=20 nodelay` и таймаутом `1s`.
   * Блок `location /api/pay/` с проксированием на `127.0.0.1:5000` (платёжное ядро).
-- [ ] **TASK-4.3:** Подготовить Systemd-юнит `deploy/swipies-tracker.service`:
+- [x] **TASK-4.3:** Подготовить Systemd-юнит `deploy/swipies-tracker.service`:
   * Запуск Gunicorn с сервисом трекинга на порту `127.0.0.1:5001`.
   * Аппаратные лимиты: `MemoryMax=256M`, `CPUQuota=50%`, `Restart=always`.
-- [ ] **TASK-4.4:** Разработать нагрузочный тест изоляции процессов `tests/test_process_isolation_stress.py`:
+- [x] **TASK-4.4:** Разработать нагрузочный тест изоляции процессов `tests/test_process_isolation_stress.py`:
   * Синтетическая нагрузка: 100 req/sec на порт 5001 в течение 60 секунд.
   * Замер влияния на порт 5000:
     1. $p95$ задержка платёжных роутов увеличивается не более чем на **+15 мс** ($\Delta \le 20\%$).

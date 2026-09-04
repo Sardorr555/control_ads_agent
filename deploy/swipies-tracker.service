@@ -1,0 +1,37 @@
+[Unit]
+Description=SWIPIES Traffic Attribution Ingestion Service (Track 3)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/var/www/swipies/ads_agent
+EnvironmentFile=/var/www/swipies/ads_agent/.env
+ExecStart=/var/www/swipies/ads_agent/venv/bin/gunicorn \
+    --workers 2 \
+    --threads 4 \
+    --bind 127.0.0.1:5001 \
+    --timeout 5 \
+    --access-logfile - \
+    --error-logfile - \
+    "src.tracker_service:create_app()"
+
+# Strict Cgroups & Hardware Resource Limits (Gate 2 Protection)
+MemoryMax=256M
+MemoryHigh=200M
+CPUQuota=50%
+LimitNOFILE=65536
+
+# Resiliency & Recovery
+Restart=always
+RestartSec=3s
+KillMode=control-group
+
+# Sandboxing
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
