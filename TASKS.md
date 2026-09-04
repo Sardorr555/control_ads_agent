@@ -132,22 +132,23 @@
 ---
 
 ### Блок 6: CLI-интерфейс, AST-аудит безопасности и сквозной E2E (Risk Order: 6)
-- [ ] **TASK-6.1:** Реализовать CLI интерфейс `src/cli.py` (на базе `typer`):
+- [x] **TASK-6.1:** Реализовать CLI интерфейс `src/cli.py` (на базе `typer`):
   * `attribution-report --from YYYY-MM-DD --to YYYY-MM-DD [--model first-touch|last-touch]` (сводная таблица в консоли через `tabulate`).
   * `export --from YYYY-MM-DD --to YYYY-MM-DD --format csv|json --output path/to/file`.
   * `purge-old-events [--days 30]` (ручной вызов очистки).
   * `audit-security` (проверка прав и доступности).
-- [ ] **TASK-6.2:** Разработать автоматический AST-сканер безопасности `tests/test_codebase_allowlist_scan.py`:
+- [x] **TASK-6.2:** Разработать автоматический AST-сканер безопасности `tests/test_codebase_allowlist_scan.py`:
   * Рекурсивный парсинг абстрактного синтаксического дерева файлов каталога `src/`.
   * Проверка запрета импортов из `atmos payment system/` и `server/`.
   * Проверка отсутствия чтения `.env` или обращения к `docs/specs/`.
   * *Критерий верификации:* `pytest tests/test_codebase_allowlist_scan.py -v` (зелёный).
-- [ ] **TASK-6.3:** Разработать сквозной E2E интеграционный тест `tests/test_e2e_traffic_to_payment.py`:
+- [x] **TASK-6.3:** Разработать сквозной E2E интеграционный тест `tests/test_e2e_traffic_to_payment.py`:
   * Имитация визита пользователя с UTM-метками Meta (`utm_source=meta&utm_campaign=b2b_fintech`).
   * Фиксация событий трекером и сохранение в SQLite.
   * Имитация успешной оплаты через mock `payment_transaction` с `session_id`.
   * Вызов `attribution-report` и сверка расчётов ROAS и CAC.
   * *Критерий верификации:* `pytest tests/test_e2e_traffic_to_payment.py -v` (зелёный).
+
 
 ### 🛑 КОНТРОЛЬНАЯ ТОЧКА Г (Checkpoint D — Final E2E Gate 4):
 > **Отчёт человеку:** Предъявить полный отчёт выполнения `pytest` (100% тестов зелёные), отчёт AST-сканера чистоты кодовой базы и консольный вывод реального отчёта атрибуции.
