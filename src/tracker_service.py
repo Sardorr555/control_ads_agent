@@ -47,11 +47,13 @@ def create_app(db_path: str = None, base_salt: str = None) -> Flask:
         }), 200
 
     @app.route("/api/v1/track/event", methods=["OPTIONS"])
+    @app.route("/event", methods=["OPTIONS"])
     def options_track_event():
         resp = make_response("", 204)
         return resp
 
     @app.route("/api/v1/track/event", methods=["POST"])
+    @app.route("/event", methods=["POST"])
     def track_event():
         """
         Ingestion endpoint for client events (pageview, heartbeat, leave, conversion).
