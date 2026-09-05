@@ -20,11 +20,13 @@ class SessionMatcher:
         self,
         repo: SQLiteEventsRepo,
         attribution_window_days: int = 30,
-        ip_fallback_window_hours: int = 24
+        ip_fallback_window_hours: int = 24,
+        enable_ip_fallback: bool = False
     ):
         self.repo = repo
         self.attribution_window_days = attribution_window_days
         self.ip_fallback_window_hours = ip_fallback_window_hours
+        self.enable_ip_fallback = enable_ip_fallback
 
     def _parse_datetime(self, val: Any) -> datetime:
         if isinstance(val, datetime):
@@ -113,35 +115,36 @@ class SessionMatcher:
                 masked_payer_hash=masked_payer_hash
             )
 
-        # 2. IP Hash Fallback Matching (24-hour window)
-        ip_hash = payment.get("ip_hash")
-        if ip_hash:
-            since = payment_time - timedelta(hours=self.ip_fallback_window_hours)
-            ip_event = self.repo.get_touch_by_ip_hash(
-                ip_hash=ip_hash,
-                since=since,
-                before_time=payment_time,
-                model=model
-            )
-            if ip_event and ip_event.get("utm_source"):
-                event_time = self._parse_datetime(ip_event["timestamp"])
-                time_to_convert = max(0, int((payment_time - event_time).total_seconds()))
-                return AttributionMatchDTO(
-                    transaction_id=transaction_id,
-                    session_id=ip_event.get("session_id") or session_id,
-                    payment_time=payment_time,
-                    amount_uzs=amount_uzs,
-                    currency=currency,
-                    plan_type=plan_type,
-                    utm_source=ip_event.get("utm_source"),
-                    utm_medium=ip_event.get("utm_medium") or "(none)",
-                    utm_campaign=ip_event.get("utm_campaign") or "(direct)",
-                    utm_content=ip_event.get("utm_content"),
-                    utm_term=ip_event.get("utm_term"),
-                    match_type="ip_time_window",
-                    time_to_convert_sec=time_to_convert,
-                    masked_payer_hash=masked_payer_hash
+        # 2. IP Hash Fallback Matching (strictly opt-in, disabled by default to prevent CGNAT collisions)
+        if self.enable_ip_fallback:
+            ip_hash = payment.get("ip_hash")
+            if ip_hash:
+                since = payment_time - timedelta(hours=self.ip_fallback_window_hours)
+                ip_event = self.repo.get_touch_by_ip_hash(
+                    ip_hash=ip_hash,
+                    since=since,
+                    before_time=payment_time,
+                    model=model
                 )
+                if ip_event and ip_event.get("utm_source"):
+                    event_time = self._parse_datetime(ip_event["timestamp"])
+                    time_to_convert = max(0, int((payment_time - event_time).total_seconds()))
+                    return AttributionMatchDTO(
+                        transaction_id=transaction_id,
+                        session_id=ip_event.get("session_id") or session_id,
+                        payment_time=payment_time,
+                        amount_uzs=amount_uzs,
+                        currency=currency,
+                        plan_type=plan_type,
+                        utm_source=ip_event.get("utm_source"),
+                        utm_medium=ip_event.get("utm_medium") or "(none)",
+                        utm_campaign=ip_event.get("utm_campaign") or "(direct)",
+                        utm_content=ip_event.get("utm_content"),
+                        utm_term=ip_event.get("utm_term"),
+                        match_type="ip_time_window",
+                        time_to_convert_sec=time_to_convert,
+                        masked_payer_hash=masked_payer_hash
+                    )
 
         # 3. Organic / Direct Unmatched Fallback
         return AttributionMatchDTO(

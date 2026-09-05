@@ -159,7 +159,6 @@ def test_payment_utm_fallback_when_event_absent(temp_repo):
 
 
 def test_ip_fallback_matching_when_session_id_absent(temp_repo):
-    matcher = SessionMatcher(repo=temp_repo, ip_fallback_window_hours=24)
     ip_hash = "d" * 64
     base_time = datetime(2026, 3, 15, 10, 0, 0, tzinfo=timezone.utc)
 
@@ -185,7 +184,16 @@ def test_ip_fallback_matching_when_session_id_absent(temp_repo):
         "plan_type": "annual"
     }
 
-    match = matcher.match_payment(payment_record, model="last-touch")
+    # Case A: Default (enable_ip_fallback=False) -> Protect against CGNAT collisions, yields organic_unmatched
+    default_matcher = SessionMatcher(repo=temp_repo)
+    default_match = default_matcher.match_payment(payment_record, model="last-touch")
+    assert default_match.match_type == "organic_unmatched"
+    assert default_match.utm_source == "(direct)"
+    assert default_match.utm_campaign == "(direct)"
+
+    # Case B: Opt-in (enable_ip_fallback=True) -> Matches by IP time window
+    opt_in_matcher = SessionMatcher(repo=temp_repo, ip_fallback_window_hours=24, enable_ip_fallback=True)
+    match = opt_in_matcher.match_payment(payment_record, model="last-touch")
     assert match.match_type == "ip_time_window"
     assert match.utm_source == "meta_instagram"
     assert match.utm_campaign == "lead_magnet"

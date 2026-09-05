@@ -54,7 +54,8 @@ def attribution_report(
     model: str = typer.Option("first-touch", "--model", help="Attribution model: 'first-touch' or 'last-touch'"),
     db_path: str = typer.Option("./data/attribution_events.db", "--db-path", help="Path to SQLite events DB"),
     ad_spend_file: Optional[str] = typer.Option(None, "--ad-spend-file", help="Path to JSON file with campaign spends"),
-    payments_mock_file: Optional[str] = typer.Option(None, "--payments-mock-file", help="Optional mock payments JSON file for offline analysis")
+    payments_mock_file: Optional[str] = typer.Option(None, "--payments-mock-file", help="Optional mock payments JSON file for offline analysis"),
+    enable_ip_fallback: bool = typer.Option(False, "--enable-ip-fallback", help="Opt-in to IP-hash fallback matching (disabled by default to prevent CGNAT collisions)")
 ):
     """
     Generate end-to-end attribution report linking marketing traffic with payments.
@@ -67,7 +68,7 @@ def attribution_report(
         raise typer.Exit(code=1)
 
     repo = SQLiteEventsRepo(db_path=db_path)
-    matcher = SessionMatcher(repo=repo)
+    matcher = SessionMatcher(repo=repo, enable_ip_fallback=enable_ip_fallback)
 
     # 1. Fetch payments
     payments: List[Dict[str, Any]] = []
@@ -158,7 +159,8 @@ def export(
     output: str = typer.Option("./attribution_export.json", "--output", help="Output file path"),
     model: str = typer.Option("first-touch", "--model", help="Attribution model: 'first-touch' or 'last-touch'"),
     db_path: str = typer.Option("./data/attribution_events.db", "--db-path", help="Path to SQLite events DB"),
-    payments_mock_file: Optional[str] = typer.Option(None, "--payments-mock-file", help="Mock payments JSON file")
+    payments_mock_file: Optional[str] = typer.Option(None, "--payments-mock-file", help="Mock payments JSON file"),
+    enable_ip_fallback: bool = typer.Option(False, "--enable-ip-fallback", help="Opt-in to IP-hash fallback matching (disabled by default to prevent CGNAT collisions)")
 ):
     """
     Export matched attribution records to CSV or JSON.
@@ -167,7 +169,7 @@ def export(
     end_dt = parse_date_param(to_date, default_hour=23)
 
     repo = SQLiteEventsRepo(db_path=db_path)
-    matcher = SessionMatcher(repo=repo)
+    matcher = SessionMatcher(repo=repo, enable_ip_fallback=enable_ip_fallback)
 
     payments: List[Dict[str, Any]] = []
     if payments_mock_file and os.path.exists(payments_mock_file):
