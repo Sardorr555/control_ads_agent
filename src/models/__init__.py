@@ -24,6 +24,27 @@ from .twitter_ads import (
     TwitterLineItemDTO,
     TwitterCampaignDTO,
 )
+from .meta_ads import (
+    MetaCampaignObjective,
+    MetaEntityStatus,
+    MetaBillingEvent,
+    MetaOptimizationGoal,
+    MetaAdsSafetyViolation,
+    MetaTargetingDTO,
+    MetaAdCreativeDTO,
+    MetaAdSetDTO,
+    MetaCampaignDTO,
+)
+from .yandex_ads import (
+    YandexCampaignType,
+    YandexCampaignState,
+    YandexBudgetMode,
+    YandexAdsSafetyViolation,
+    YandexKeywordDTO,
+    YandexTextAdDTO,
+    YandexAdGroupDTO,
+    YandexCampaignDTO,
+)
 
 __all__ = [
     "RawTrafficEventDTO",
@@ -51,4 +72,21 @@ __all__ = [
     "TwitterPromotedTweetDTO",
     "TwitterLineItemDTO",
     "TwitterCampaignDTO",
+    "MetaCampaignObjective",
+    "MetaEntityStatus",
+    "MetaBillingEvent",
+    "MetaOptimizationGoal",
+    "MetaAdsSafetyViolation",
+    "MetaTargetingDTO",
+    "MetaAdCreativeDTO",
+    "MetaAdSetDTO",
+    "MetaCampaignDTO",
+    "YandexCampaignType",
+    "YandexCampaignState",
+    "YandexBudgetMode",
+    "YandexAdsSafetyViolation",
+    "YandexKeywordDTO",
+    "YandexTextAdDTO",
+    "YandexAdGroupDTO",
+    "YandexCampaignDTO",
 ]

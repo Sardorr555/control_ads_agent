@@ -509,6 +509,233 @@ def twitter_mock_spend(
         typer.echo(f"[SAVED] Spend data exported to '{output_file}' for attribution-report.\n")
 
 
+# ----------------------------------------------------------------------
+# Meta (Instagram / Facebook) Ads Sub-App (Track 6)
+# ----------------------------------------------------------------------
+meta_app = typer.Typer(
+    name="meta",
+    help="Meta (Instagram/Facebook) Ads LeadGen, Dry-Run & Financial Zero-Trust (Track 6)",
+    add_completion=False
+)
+app.add_typer(meta_app, name="meta")
+
+
+@meta_app.command("preview")
+def meta_preview(
+    budget_usd: float = typer.Option(15.0, "--budget-usd", help="Daily campaign budget in USD")
+):
+    """Preview pre-configured SWIPIES B2B Instagram/Facebook campaign."""
+    from .providers.meta_ads_service import MetaAdsService
+    service = MetaAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_usd=budget_usd)
+    typer.echo(service.preview_campaign_summary(campaign))
+
+
+@meta_app.command("validate")
+def meta_validate(
+    budget_usd: float = typer.Option(15.0, "--budget-usd", help="Daily campaign budget in USD"),
+    dry_run: bool = typer.Option(True, "--dry-run/--live", help="Dry-run simulation mode"),
+    confirm_approval: Optional[str] = typer.Option(None, "--confirm-budget-approval", help="Human approval token"),
+):
+    """Validate Meta campaign, targeting, and ad creatives via dry-run."""
+    from .providers.meta_ads_service import MetaAdsService
+    from .models.meta_ads import MetaAdsSafetyViolation
+
+    service = MetaAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_usd=budget_usd)
+
+    typer.echo(f"\n--- [SWIPIES Meta (Instagram/FB) Ads Pre-Flight Validation] ---")
+    typer.echo(f"Campaign: {campaign.name}")
+    typer.echo(f"Mode: {'DRY_RUN (Simulated Zero-Key)' if dry_run else 'LIVE_API'}")
+    typer.echo(f"Daily Budget: ${campaign.daily_budget_usd:.2f} / day")
+
+    try:
+        result = service.validate_and_deploy(
+            campaign=campaign,
+            dry_run=dry_run,
+            approval_token=confirm_approval
+        )
+        typer.echo(f"\n[PASS] Status: {result.get('status')}")
+        typer.echo(f"Platform: {result.get('platform')}")
+        typer.echo(f"AdSets Validated: {result.get('adsets_count', 0)}")
+        typer.echo(f"Creatives Validated: {result.get('creatives_count', 0)}")
+        if result.get("validation_notes"):
+            for note in result["validation_notes"]:
+                typer.echo(f"  [OK] {note}")
+        if result.get("created_resources"):
+            res = result["created_resources"]
+            typer.echo("\nSimulated Meta Graph Resources:")
+            typer.echo(f"  - Campaign ID: {res.get('campaign')}")
+            typer.echo(f"  - AdSets: {', '.join(res.get('adsets', []))}")
+            typer.echo(f"  - Ads: {', '.join(res.get('ads', []))}")
+        typer.echo("\n[SUCCESS] Campaign is ready and compliant with Meta Marketing Policies.\n")
+    except MetaAdsSafetyViolation as e:
+        typer.echo(f"\n[SECURITY VIOLATION] {e}", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"\n[ERROR] Validation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@meta_app.command("check-credentials")
+def meta_check_credentials():
+    """Check status of Meta Marketing API credentials in the environment."""
+    from .providers.meta_ads_client import MetaAdsClient
+    client = MetaAdsClient()
+    status = client.check_credentials_status()
+
+    typer.echo("\n--- [Meta Marketing API Credentials Audit] ---")
+    typer.echo(f"Ad Account ID:   {status['ad_account_id']}")
+    typer.echo(f"Access Token:    {'[OK] Present' if status['access_token_present'] else '[MISSING] Not set'}")
+    typer.echo(f"App ID:          {'[OK] Present' if status['app_id_present'] else '[MISSING] Not set'}")
+    typer.echo(f"App Secret:      {'[OK] Present' if status['app_secret_present'] else '[MISSING] Not set'}")
+    typer.echo(f"Active Mode:     {status['mode']}")
+    if status["is_ready_for_live"]:
+        typer.echo("\n[READY] All credentials configured for live API requests.")
+    else:
+        typer.echo("\n[INFO] Running in Zero-Key Mock/Dry-Run mode. Safe for local testing.")
+    typer.echo("----------------------------------------------\n")
+
+
+@meta_app.command("mock-spend")
+def meta_mock_spend(
+    clicks: int = typer.Option(300, "--clicks", help="Number of simulated clicks"),
+    cpc_usd: float = typer.Option(0.28, "--cpc", help="Simulated Average CPC in USD"),
+    output_file: Optional[str] = typer.Option(None, "--output", help="Path to save JSON spend report")
+):
+    """Generate simulated Meta Ads spend report for Attribution Engine."""
+    from .providers.meta_ads_service import MetaAdsService
+    service = MetaAdsService()
+    spend_data = service.generate_mock_spend_report(clicks=clicks, avg_cpc_usd=cpc_usd)
+
+    typer.echo("\n--- [Meta Ads Campaign Spend Simulation] ---")
+    typer.echo(f"Campaign:        {spend_data['campaign_name']}")
+    typer.echo(f"Impressions:     {spend_data['impressions']}")
+    typer.echo(f"Clicks:          {spend_data['clicks']} (CTR: {spend_data['ctr_percent']}%)")
+    typer.echo(f"Average CPC:     ${spend_data['avg_cpc_usd']:.2f}")
+    typer.echo(f"Total Spend USD: ${spend_data['total_spend_usd']:.2f}")
+    typer.echo(f"Total Spend UZS: {spend_data['total_spend_uzs']:,} UZS (excl. VAT)")
+
+    if output_file:
+        spend_dict = {spend_data["campaign_name"]: spend_data["total_spend_uzs"]}
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(spend_dict, f, indent=2)
+        typer.echo(f"[SAVED] Spend data exported to '{output_file}' for attribution-report.\n")
+
+
+# ----------------------------------------------------------------------
+# Yandex Direct Ads Sub-App (Track 7)
+# ----------------------------------------------------------------------
+yandex_app = typer.Typer(
+    name="yandex",
+    help="Yandex Direct (РСЯ/Search) Ads Automation & Local UZS Accounting (Track 7)",
+    add_completion=False
+)
+app.add_typer(yandex_app, name="yandex")
+
+
+@yandex_app.command("preview")
+def yandex_preview(
+    budget_uzs: int = typer.Option(200_000, "--budget-uzs", help="Daily campaign budget in UZS")
+):
+    """Preview pre-configured SWIPIES B2B Yandex Direct campaign."""
+    from .providers.yandex_ads_service import YandexAdsService
+    service = YandexAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_uzs=budget_uzs)
+    typer.echo(service.preview_campaign_summary(campaign))
+
+
+@yandex_app.command("validate")
+def yandex_validate(
+    budget_uzs: int = typer.Option(200_000, "--budget-uzs", help="Daily campaign budget in UZS"),
+    dry_run: bool = typer.Option(True, "--dry-run/--live", help="Dry-run simulation mode"),
+    confirm_approval: Optional[str] = typer.Option(None, "--confirm-budget-approval", help="Human approval token"),
+):
+    """Validate Yandex Direct campaign via dry-run simulation."""
+    from .providers.yandex_ads_service import YandexAdsService
+    from .models.yandex_ads import YandexAdsSafetyViolation
+
+    service = YandexAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_uzs=budget_uzs)
+
+    typer.echo(f"\n--- [SWIPIES Yandex Direct Pre-Flight Validation] ---")
+    typer.echo(f"Campaign: {campaign.name}")
+    typer.echo(f"Mode: {'DRY_RUN (Simulated Zero-Key)' if dry_run else 'LIVE_API'}")
+    typer.echo(f"Daily Budget: {campaign.daily_budget_uzs:,} UZS (STANDARD mode: Zero Overspend)")
+
+    try:
+        result = service.validate_and_deploy(
+            campaign=campaign,
+            dry_run=dry_run,
+            approval_token=confirm_approval
+        )
+        typer.echo(f"\n[PASS] Status: {result.get('status')}")
+        typer.echo(f"Platform: {result.get('platform')}")
+        typer.echo(f"Ad Groups Validated: {result.get('ad_groups_count', 0)}")
+        typer.echo(f"Ads Validated: {result.get('ads_count', 0)}")
+        if result.get("validation_notes"):
+            for note in result["validation_notes"]:
+                typer.echo(f"  [OK] {note}")
+        if result.get("created_resources"):
+            res = result["created_resources"]
+            typer.echo("\nSimulated Yandex Direct Resources:")
+            typer.echo(f"  - Campaign ID: {res.get('campaign')}")
+            typer.echo(f"  - Ad Groups: {', '.join(res.get('ad_groups', []))}")
+            typer.echo(f"  - Ads: {', '.join(res.get('ads', []))}")
+        typer.echo("\n[SUCCESS] Campaign is ready and compliant with Yandex Direct Policies.\n")
+    except YandexAdsSafetyViolation as e:
+        typer.echo(f"\n[SECURITY VIOLATION] {e}", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"\n[ERROR] Validation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@yandex_app.command("check-credentials")
+def yandex_check_credentials():
+    """Check status of Yandex Direct API credentials in the environment."""
+    from .providers.yandex_ads_client import YandexAdsClient
+    client = YandexAdsClient()
+    status = client.check_credentials_status()
+
+    typer.echo("\n--- [Yandex Direct API Credentials Audit] ---")
+    typer.echo(f"OAuth Token:     {'[OK] Present' if status['token_present'] else '[MISSING] Not set'}")
+    typer.echo(f"Client Login:    {status['client_login']}")
+    typer.echo(f"Sandbox Enabled: {status['use_sandbox']}")
+    typer.echo(f"Active Mode:     {status['mode']}")
+    if status["is_ready_for_live"]:
+        typer.echo("\n[READY] All credentials configured for live API requests.")
+    else:
+        typer.echo("\n[INFO] Running in Zero-Key Mock/Dry-Run mode. Safe for local testing.")
+    typer.echo("---------------------------------------------\n")
+
+
+@yandex_app.command("mock-spend")
+def yandex_mock_spend(
+    clicks: int = typer.Option(180, "--clicks", help="Number of simulated clicks"),
+    cpc_uzs: int = typer.Option(5_500, "--cpc-uzs", help="Simulated Average CPC in UZS"),
+    output_file: Optional[str] = typer.Option(None, "--output", help="Path to save JSON spend report")
+):
+    """Generate simulated Yandex Direct spend report for Attribution Engine."""
+    from .providers.yandex_ads_service import YandexAdsService
+    service = YandexAdsService()
+    spend_data = service.generate_mock_spend_report(clicks=clicks, avg_cpc_uzs=cpc_uzs)
+
+    typer.echo("\n--- [Yandex Direct Campaign Spend Simulation] ---")
+    typer.echo(f"Campaign:        {spend_data['campaign_name']}")
+    typer.echo(f"Impressions:     {spend_data['impressions']}")
+    typer.echo(f"Clicks:          {spend_data['clicks']} (CTR: {spend_data['ctr_percent']}%)")
+    typer.echo(f"Average CPC:     {spend_data['avg_cpc_uzs']:,} UZS")
+    typer.echo(f"Total Spend UZS: {spend_data['total_spend_uzs']:,} UZS (excl. VAT)")
+    typer.echo(f"Total Spend USD: ~${spend_data['total_spend_usd']:.2f}")
+
+    if output_file:
+        spend_dict = {spend_data["campaign_name"]: spend_data["total_spend_uzs"]}
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(spend_dict, f, indent=2)
+        typer.echo(f"[SAVED] Spend data exported to '{output_file}' for attribution-report.\n")
+
+
 def main():
     app()
 

@@ -36,6 +36,8 @@ ENV/
 *.sqlite3
 data/*.db
 data/*.sqlite
+data/*.json
+*.tar.gz
 
 # Environment variables and secrets (STRICT ISOLATION)
 .env
