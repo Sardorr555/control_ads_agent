@@ -264,9 +264,131 @@ def audit_security(
     typer.echo("[PASS] Security audit completed successfully.\n")
 
 
+# ----------------------------------------------------------------------
+# Google Ads Management Sub-App (Track 4)
+# ----------------------------------------------------------------------
+google_app = typer.Typer(
+    name="google",
+    help="Google Ads B2B Search Automation, Dry-Run Validation & Financial Zero-Trust (Track 4)",
+    add_completion=False
+)
+app.add_typer(google_app, name="google")
+
+
+@google_app.command("preview")
+def google_preview(
+    budget_usd: float = typer.Option(10.0, "--budget-usd", help="Daily campaign budget in USD")
+):
+    """
+    Preview the pre-configured SWIPIES Enterprise B2B Search Campaign structure.
+    """
+    from .providers.google_ads_service import GoogleAdsService
+    service = GoogleAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_usd=budget_usd)
+    preview_text = service.preview_campaign_summary(campaign)
+    typer.echo(preview_text)
+
+
+@google_app.command("validate")
+def google_validate(
+    budget_usd: float = typer.Option(10.0, "--budget-usd", help="Daily campaign budget in USD"),
+    dry_run: bool = typer.Option(True, "--dry-run/--live", help="Dry-run simulation mode"),
+    confirm_approval: Optional[str] = typer.Option(None, "--confirm-budget-approval", help="Human approval token required for live mutations"),
+):
+    """
+    Validate campaign structure and run pre-flight dry-run simulation against Google Ads Policy.
+    """
+    from .providers.google_ads_service import GoogleAdsService
+    from .models.google_ads import GoogleAdsSafetyViolation
+
+    service = GoogleAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_usd=budget_usd)
+
+    typer.echo(f"\n--- [SWIPIES Google Ads Pre-Flight Validation] ---")
+    typer.echo(f"Campaign: {campaign.name}")
+    typer.echo(f"Mode: {'DRY_RUN (Simulated Zero-Key)' if dry_run else 'LIVE_API'}")
+    typer.echo(f"Daily Budget: ${campaign.daily_budget_usd:.2f} (200% Pacing Risk: ${campaign.max_daily_spend_risk_usd:.2f})")
+
+    try:
+        result = service.validate_and_deploy(
+            campaign=campaign,
+            dry_run=dry_run,
+            approval_token=confirm_approval
+        )
+        typer.echo(f"\n[PASS] Status: {result.get('status')}")
+        typer.echo(f"Operations Validated: {result.get('operations_count', 0)}")
+        if result.get("validation_notes"):
+            for note in result["validation_notes"]:
+                typer.echo(f"  [OK] {note}")
+        if result.get("created_resources"):
+            typer.echo("\nSimulated Google Resource Names:")
+            for res in result["created_resources"]:
+                typer.echo(f"  - {res}")
+        typer.echo("\n[SUCCESS] Campaign is ready and compliant with Google Ads Search Policies.\n")
+    except GoogleAdsSafetyViolation as e:
+        typer.echo(f"\n[SECURITY VIOLATION] {e}", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"\n[ERROR] Validation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@google_app.command("check-credentials")
+def google_check_credentials():
+    """
+    Check status of Google Ads API credentials in the environment.
+    """
+    from .providers.google_ads_client import GoogleAdsClient
+    client = GoogleAdsClient()
+    status = client.check_credentials_status()
+
+    typer.echo("\n--- [Google Ads API Credentials Audit] ---")
+    typer.echo(f"Developer Token:  {'[OK] Present' if status['developer_token_present'] else '[MISSING] Not set'}")
+    typer.echo(f"OAuth Client ID:  {'[OK] Present' if status['client_id_present'] else '[MISSING] Not set'}")
+    typer.echo(f"OAuth Secret:     {'[OK] Present' if status['client_secret_present'] else '[MISSING] Not set'}")
+    typer.echo(f"Refresh Token:    {'[OK] Present' if status['refresh_token_present'] else '[MISSING] Not set'}")
+    typer.echo(f"Customer ID:      {status['customer_id']}")
+    typer.echo(f"Active Mode:      {status['mode']}")
+    if status["is_ready_for_live"]:
+        typer.echo("\n[READY] All credentials configured for live API requests.")
+    else:
+        typer.echo("\n[INFO] Running in Zero-Key Mock/Dry-Run mode. Safe for local testing.")
+    typer.echo("------------------------------------------\n")
+
+
+@google_app.command("mock-spend")
+def google_mock_spend(
+    clicks: int = typer.Option(120, "--clicks", help="Number of simulated clicks"),
+    cpc_usd: float = typer.Option(0.45, "--cpc", help="Simulated Average CPC in USD"),
+    output_file: Optional[str] = typer.Option(None, "--output", help="Optional path to save JSON spend report for attribution")
+):
+    """
+    Generate simulated Google Ads spend report to link with Attribution Engine.
+    """
+    from .providers.google_ads_service import GoogleAdsService
+    service = GoogleAdsService()
+    spend_data = service.generate_mock_spend_report(clicks=clicks, avg_cpc_usd=cpc_usd)
+
+    typer.echo("\n--- [Google Ads Campaign Spend Simulation] ---")
+    typer.echo(f"Campaign:        {spend_data['campaign_name']}")
+    typer.echo(f"Impressions:     {spend_data['impressions']}")
+    typer.echo(f"Clicks:          {spend_data['clicks']} (CTR: {spend_data['ctr_percent']}%)")
+    typer.echo(f"Average CPC:     ${spend_data['avg_cpc_usd']:.2f}")
+    typer.echo(f"Total Spend USD: ${spend_data['total_spend_usd']:.2f}")
+    typer.echo(f"Total Spend UZS: {spend_data['total_spend_uzs']:,} UZS (excl. VAT)")
+
+    if output_file:
+        # Format as spend dict for attribution-report --ad-spend-file
+        spend_dict = {spend_data["campaign_name"]: spend_data["total_spend_uzs"]}
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(spend_dict, f, indent=2)
+        typer.echo(f"[SAVED] Spend data exported to '{output_file}' for attribution-report.\n")
+
+
 def main():
     app()
 
 
 if __name__ == "__main__":
     main()
+

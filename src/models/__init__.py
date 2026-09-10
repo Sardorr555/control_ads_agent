@@ -1,6 +1,18 @@
 from .events import RawTrafficEventDTO, UserAgentInfo
 from .attribution import AttributionMatchDTO, CampaignAttributionMetric
 from .reports import DailyAttributionReportDTO, UtmPerformanceSummary
+from .google_ads import (
+    KeywordMatchType,
+    CampaignStatus,
+    BiddingStrategy,
+    GoogleAdsSafetyViolation,
+    GoogleKeywordDTO,
+    GoogleAdHeadlineDTO,
+    GoogleAdDescriptionDTO,
+    GoogleResponsiveSearchAdDTO,
+    GoogleAdGroupDTO,
+    GoogleCampaignDTO,
+)
 
 __all__ = [
     "RawTrafficEventDTO",
@@ -9,4 +21,14 @@ __all__ = [
     "CampaignAttributionMetric",
     "DailyAttributionReportDTO",
     "UtmPerformanceSummary",
+    "KeywordMatchType",
+    "CampaignStatus",
+    "BiddingStrategy",
+    "GoogleAdsSafetyViolation",
+    "GoogleKeywordDTO",
+    "GoogleAdHeadlineDTO",
+    "GoogleAdDescriptionDTO",
+    "GoogleResponsiveSearchAdDTO",
+    "GoogleAdGroupDTO",
+    "GoogleCampaignDTO",
 ]

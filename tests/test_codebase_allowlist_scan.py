@@ -18,6 +18,7 @@ ALLOWED_TOP_LEVEL_MODULES = {
     "os", "sys", "re", "time", "json", "csv", "socket", "logging",
     "threading", "statistics", "datetime", "decimal", "collections",
     "typing", "hashlib", "ipaddress", "sqlite3", "pathlib", "math",
+    "enum", "uuid", "urllib", "dataclasses",
     # Third-party runtime approved stack
     "pydantic", "flask", "werkzeug", "pymysql", "typer", "tabulate", "httpx",
     # Internal project package
