@@ -148,7 +148,7 @@ class MySQLReadOnlyClient:
             utm_content,
             utm_term,
             masked_payer_hash
-        FROM swipies_db.v_attribution_payments
+        FROM {self.database}.v_attribution_payments
         {where_clause}
         ORDER BY payment_time ASC
         LIMIT %s;
