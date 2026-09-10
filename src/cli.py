@@ -385,6 +385,130 @@ def google_mock_spend(
         typer.echo(f"[SAVED] Spend data exported to '{output_file}' for attribution-report.\n")
 
 
+# ----------------------------------------------------------------------
+# Twitter / X Ads Management Sub-App (Track 5)
+# ----------------------------------------------------------------------
+twitter_app = typer.Typer(
+    name="twitter",
+    help="Twitter / X Ads B2B Tech Lead Generation, Dry-Run & Financial Zero-Trust (Track 5)",
+    add_completion=False
+)
+app.add_typer(twitter_app, name="twitter")
+
+
+@twitter_app.command("preview")
+def twitter_preview(
+    budget_usd: float = typer.Option(15.0, "--budget-usd", help="Daily campaign budget in USD")
+):
+    """
+    Preview the pre-configured SWIPIES Enterprise B2B tech campaign on Twitter/X.
+    """
+    from .providers.twitter_ads_service import TwitterAdsService
+    service = TwitterAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_usd=budget_usd)
+    preview_text = service.preview_campaign_summary(campaign)
+    typer.echo(preview_text)
+
+
+@twitter_app.command("validate")
+def twitter_validate(
+    budget_usd: float = typer.Option(15.0, "--budget-usd", help="Daily campaign budget in USD"),
+    dry_run: bool = typer.Option(True, "--dry-run/--live", help="Dry-run simulation mode"),
+    confirm_approval: Optional[str] = typer.Option(None, "--confirm-budget-approval", help="Human approval token required for live mutations"),
+):
+    """
+    Validate Twitter/X campaign structure, targeting, and creative via dry-run simulation.
+    """
+    from .providers.twitter_ads_service import TwitterAdsService
+    from .models.twitter_ads import TwitterAdsSafetyViolation
+
+    service = TwitterAdsService()
+    campaign = service.build_default_swipies_campaign(daily_budget_usd=budget_usd)
+
+    typer.echo(f"\n--- [SWIPIES Twitter / X Ads Pre-Flight Validation] ---")
+    typer.echo(f"Campaign: {campaign.name}")
+    typer.echo(f"Mode: {'DRY_RUN (Simulated Zero-Key)' if dry_run else 'LIVE_API'}")
+    typer.echo(f"Daily Budget: ${campaign.daily_budget_usd:.2f} / day")
+
+    try:
+        result = service.validate_and_deploy(
+            campaign=campaign,
+            dry_run=dry_run,
+            approval_token=confirm_approval
+        )
+        typer.echo(f"\n[PASS] Status: {result.get('status')}")
+        typer.echo(f"Platform: {result.get('platform')}")
+        typer.echo(f"Targeting Rules Validated: {result.get('targeting_rules_count', 0)}")
+        typer.echo(f"Promoted Tweets Validated: {result.get('promoted_tweets_count', 0)}")
+        if result.get("validation_notes"):
+            for note in result["validation_notes"]:
+                typer.echo(f"  [OK] {note}")
+        if result.get("created_resources"):
+            res = result["created_resources"]
+            typer.echo("\nSimulated X Ads Resources:")
+            typer.echo(f"  - Campaign ID: {res.get('campaign')}")
+            typer.echo(f"  - Line Items: {', '.join(res.get('line_items', []))}")
+            typer.echo(f"  - Promoted Tweets: {', '.join(res.get('promoted_tweets', []))}")
+        typer.echo("\n[SUCCESS] Campaign is ready and compliant with Twitter / X Ads Policies.\n")
+    except TwitterAdsSafetyViolation as e:
+        typer.echo(f"\n[SECURITY VIOLATION] {e}", err=True)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        typer.echo(f"\n[ERROR] Validation failed: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+@twitter_app.command("check-credentials")
+def twitter_check_credentials():
+    """
+    Check status of Twitter / X Ads API credentials in the environment.
+    """
+    from .providers.twitter_ads_client import TwitterAdsClient
+    client = TwitterAdsClient()
+    status = client.check_credentials_status()
+
+    typer.echo("\n--- [Twitter / X Ads API Credentials Audit] ---")
+    typer.echo(f"Ads Account ID:       {status['ads_account_id']}")
+    typer.echo(f"API Key (Consumer):   {'[OK] Present' if status['api_key_present'] else '[MISSING] Not set'}")
+    typer.echo(f"API Secret:           {'[OK] Present' if status['api_secret_present'] else '[MISSING] Not set'}")
+    typer.echo(f"Access Token:         {'[OK] Present' if status['access_token_present'] else '[MISSING] Not set'}")
+    typer.echo(f"OAuth2 Bearer Token:  {'[OK] Present' if status['bearer_token_present'] else '[MISSING] Not set'}")
+    typer.echo(f"Active Mode:          {status['mode']}")
+    if status["is_ready_for_live"]:
+        typer.echo("\n[READY] All credentials configured for live API requests.")
+    else:
+        typer.echo("\n[INFO] Running in Zero-Key Mock/Dry-Run mode. Safe for local testing.")
+    typer.echo("----------------------------------------------\n")
+
+
+@twitter_app.command("mock-spend")
+def twitter_mock_spend(
+    clicks: int = typer.Option(200, "--clicks", help="Number of simulated clicks"),
+    cpc_usd: float = typer.Option(0.35, "--cpc", help="Simulated Average CPC in USD"),
+    output_file: Optional[str] = typer.Option(None, "--output", help="Optional path to save JSON spend report for attribution")
+):
+    """
+    Generate simulated Twitter / X Ads spend report to link with Attribution Engine.
+    """
+    from .providers.twitter_ads_service import TwitterAdsService
+    service = TwitterAdsService()
+    spend_data = service.generate_mock_spend_report(clicks=clicks, avg_cpc_usd=cpc_usd)
+
+    typer.echo("\n--- [Twitter / X Ads Campaign Spend Simulation] ---")
+    typer.echo(f"Campaign:        {spend_data['campaign_name']}")
+    typer.echo(f"Impressions:     {spend_data['impressions']}")
+    typer.echo(f"Clicks:          {spend_data['clicks']} (CTR: {spend_data['ctr_percent']}%)")
+    typer.echo(f"Average CPC:     ${spend_data['avg_cpc_usd']:.2f}")
+    typer.echo(f"Total Spend USD: ${spend_data['total_spend_usd']:.2f}")
+    typer.echo(f"Total Spend UZS: {spend_data['total_spend_uzs']:,} UZS (excl. VAT)")
+
+    if output_file:
+        spend_dict = {spend_data["campaign_name"]: spend_data["total_spend_uzs"]}
+        with open(output_file, "w", encoding="utf-8") as f:
+            json.dump(spend_dict, f, indent=2)
+        typer.echo(f"[SAVED] Spend data exported to '{output_file}' for attribution-report.\n")
+
+
 def main():
     app()
 

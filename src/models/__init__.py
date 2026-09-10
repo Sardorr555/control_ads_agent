@@ -13,6 +13,17 @@ from .google_ads import (
     GoogleAdGroupDTO,
     GoogleCampaignDTO,
 )
+from .twitter_ads import (
+    TwitterCampaignObjective,
+    TwitterEntityStatus,
+    TwitterBidType,
+    TwitterPlacement,
+    TwitterAdsSafetyViolation,
+    TwitterTargetingDTO,
+    TwitterPromotedTweetDTO,
+    TwitterLineItemDTO,
+    TwitterCampaignDTO,
+)
 
 __all__ = [
     "RawTrafficEventDTO",
@@ -31,4 +42,13 @@ __all__ = [
     "GoogleResponsiveSearchAdDTO",
     "GoogleAdGroupDTO",
     "GoogleCampaignDTO",
+    "TwitterCampaignObjective",
+    "TwitterEntityStatus",
+    "TwitterBidType",
+    "TwitterPlacement",
+    "TwitterAdsSafetyViolation",
+    "TwitterTargetingDTO",
+    "TwitterPromotedTweetDTO",
+    "TwitterLineItemDTO",
+    "TwitterCampaignDTO",
 ]
