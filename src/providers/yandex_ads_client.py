@@ -30,6 +30,12 @@ class YandexAdsClient:
         client_login: Optional[str] = None,
         use_sandbox: Optional[bool] = None,
     ):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass
+
         self.token = token or os.environ.get("YANDEX_DIRECT_TOKEN", "").strip()
         self.client_login = client_login or os.environ.get("YANDEX_DIRECT_CLIENT_LOGIN", "").strip()
         env_sandbox = os.environ.get("YANDEX_DIRECT_USE_SANDBOX", "false").lower() in ("true", "1")
@@ -46,6 +52,62 @@ class YandexAdsClient:
             "is_ready_for_live": self.has_credentials(),
             "mode": "SANDBOX" if self.use_sandbox else ("LIVE_API" if self.has_credentials() else "MOCK_DRY_RUN"),
         }
+
+    def test_connection(self) -> Dict[str, Any]:
+        """Ping Yandex Direct API v5 endpoint to verify live token authorization."""
+        if not self.token:
+            return {
+                "success": False,
+                "error": "YANDEX_DIRECT_TOKEN is not configured in .env",
+                "code": "MISSING_TOKEN"
+            }
+
+        base_url = self.SANDBOX_URL if self.use_sandbox else self.PRODUCTION_URL
+        url = f"{base_url}/campaigns"
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept-Language": "ru",
+            "Content-Type": "application/json; charset=utf-8",
+        }
+        if self.client_login:
+            headers["Client-Login"] = self.client_login
+
+        payload = {
+            "method": "get",
+            "params": {
+                "SelectionCriteria": {},
+                "FieldNames": ["Id", "Name", "State", "Status"]
+            }
+        }
+
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                resp = client.post(url, headers=headers, json=payload)
+                data = resp.json()
+                if "error" in data:
+                    err = data["error"]
+                    return {
+                        "success": False,
+                        "http_status": resp.status_code,
+                        "error_code": err.get("error_code"),
+                        "error_string": err.get("error_string", ""),
+                        "error_detail": err.get("error_detail", ""),
+                        "endpoint": base_url,
+                    }
+                campaigns = data.get("result", {}).get("Campaigns", [])
+                return {
+                    "success": True,
+                    "http_status": resp.status_code,
+                    "campaigns_count": len(campaigns),
+                    "campaigns": campaigns,
+                    "endpoint": base_url,
+                }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "endpoint": base_url,
+            }
 
     def build_direct_payloads(self, campaign: YandexCampaignDTO) -> Dict[str, Any]:
         """Build Direct API v5 JSON payloads for Campaign, AdGroups, and Ads."""

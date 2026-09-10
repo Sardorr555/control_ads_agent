@@ -23,6 +23,11 @@ import csv
 from datetime import datetime, date, timezone
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 import typer
 from tabulate import tabulate
 
@@ -718,6 +723,31 @@ def yandex_check_credentials():
     else:
         typer.echo("\n[INFO] Running in Zero-Key Mock/Dry-Run mode. Safe for local testing.")
     typer.echo("---------------------------------------------\n")
+
+
+@yandex_app.command("test-connection")
+def yandex_test_connection():
+    """Test live connectivity and authorization against Yandex Direct API v5."""
+    from .providers.yandex_ads_client import YandexAdsClient
+    client = YandexAdsClient()
+    typer.echo("\n--- [Yandex Direct API Live Connectivity Test] ---")
+    res = client.test_connection()
+    if res.get("success"):
+        typer.echo(f"[PASS] Connection successful! HTTP Status: {res.get('http_status')}")
+        typer.echo(f"Endpoint: {res.get('endpoint')}")
+        typer.echo(f"Active Campaigns Found: {res.get('campaigns_count', 0)}")
+        typer.echo("\n[READY] Your Yandex Direct token is active and authorized for API v5 operations.\n")
+    else:
+        err_code = res.get("error_code")
+        typer.echo(f"[FAIL] HTTP Status: {res.get('http_status', 'N/A')}")
+        typer.echo(f"Error Code: {err_code} ({res.get('error_string')})")
+        typer.echo(f"Detail: {res.get('error_detail')}")
+        if err_code == 58:
+            typer.echo("\n[ACTION REQUIRED] Код 58: Заявка на доступ к API еще не активирована в интерфейсе Директа.")
+            typer.echo("Чтобы активировать доступ в 1 клик:")
+            typer.echo("1. Откройте страницу управления API: https://direct.yandex.ru/registered/main.cmd?cmd=apiManagement")
+            typer.echo("2. Нажмите 'Получить доступ к API' (выберите 'Для управления своими кампаниями') и отправьте заявку.")
+            typer.echo("3. После подтверждения запустите проверку снова: python -m src.cli yandex test-connection\n")
 
 
 @yandex_app.command("mock-spend")
