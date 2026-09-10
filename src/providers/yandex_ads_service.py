@@ -33,9 +33,9 @@ class YandexAdsService:
         """
         # 1. High-Converting Text Ad (Title <= 56, Title2 <= 35, Text <= 81 chars)
         ad = YandexTextAdDTO(
-            title="SWIPIES ? ????????????? ??",
-            title2="RAG-????? ??? ????????????",
-            text="??-????? ?? ??????????? ? ?????????? ???????? ?? 1 ????. ???? ??? ??????.",
+            title="SWIPIES — Корпоративный ИИ",
+            title2="RAG-поиск без галлюцинаций",
+            text="ИИ-поиск по регламентам и документам компании за 1 день. Демо для банков.",
             href="https://swipies.io/enterprise",
             display_url_path="enterprise",
             tracking_params="utm_source=yandex&utm_medium=cpc&utm_campaign=swipies_b2b_yandex_uz&utm_content={adgroup_id}&utm_term={keyword}&yclid={yclid}"
@@ -43,18 +43,18 @@ class YandexAdsService:
 
         # 2. Keywords
         keywords = [
-            YandexKeywordDTO(keyword="?? ??? ??????", bid_uzs=6_000),
-            YandexKeywordDTO(keyword="rag ??? ??????????", bid_uzs=7_000),
-            YandexKeywordDTO(keyword="????????????? ???? ?????? ??", bid_uzs=5_000),
-            YandexKeywordDTO(keyword="????? ????? ?? ???????????", bid_uzs=5_500),
-            YandexKeywordDTO(keyword="????????? ai ??? ???????", bid_uzs=6_500),
+            YandexKeywordDTO(keyword="ии для банков", bid_uzs=6_000),
+            YandexKeywordDTO(keyword="rag для документов", bid_uzs=7_000),
+            YandexKeywordDTO(keyword="корпоративная база знаний ии", bid_uzs=5_000),
+            YandexKeywordDTO(keyword="умный поиск по регламентам", bid_uzs=5_500),
+            YandexKeywordDTO(keyword="локальный ai для бизнеса", bid_uzs=6_500),
         ]
 
         # 3. Ad Group
         ad_group = YandexAdGroupDTO(
             name="Enterprise_AI_Search_UZ",
             region_ids=region_ids or [10335, 171],  # Tashkent & Uzbekistan
-            negative_keywords=["?????????", "???????", "????????", "??????", "???????"],
+            negative_keywords=["бесплатно", "скачать", "вакансии", "диплом", "торрент"],
             keywords=keywords,
             ads=[ad]
         )
@@ -66,7 +66,7 @@ class YandexAdsService:
             budget_mode=YandexBudgetMode.STANDARD,  # Zero overspend
             state=YandexCampaignState.OFF,  # Zero-Trust
             ad_groups=[ad_group],
-            negative_keywords=["?????????", "???????", "????????", "?????", "????"]
+            negative_keywords=["бесплатно", "скачать", "вакансии", "курсы", "слив"]
         )
 
     def preview_campaign_summary(self, campaign: YandexCampaignDTO) -> str:

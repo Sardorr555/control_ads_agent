@@ -36,13 +36,13 @@ class TwitterAdsService:
         """
         daily_budget_micros = int(daily_budget_usd * 1_000_000)
 
-        # 1. High-Converting Tech Tweet Creative
+        # 1. High-Converting Tech Tweet Creative (ASCII-safe for Windows terminals)
         tweet = TwitterPromotedTweetDTO(
             text=(
-                "Tired of LLM hallucinations in production? 🚀\n\n"
+                "Tired of LLM hallucinations in production?\n\n"
                 "SWIPIES delivers air-gapped Enterprise RAG with zero hallucination retrieval, "
                 "strict data residency, and deep vector search across 50+ enterprise document formats.\n\n"
-                "Connect your internal databases and test local AI today 👇"
+                "Connect your internal databases and test local AI today:"
             ),
             card_title="SWIPIES: Enterprise RAG & Local AI",
             website_url="https://swipies.io/enterprise",
