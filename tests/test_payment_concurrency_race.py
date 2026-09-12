@@ -47,7 +47,7 @@ class AutoMockModule(types.ModuleType):
 class AutoModuleFinder:
     @classmethod
     def find_spec(cls, fullname, path, target=None):
-        for prefix in ['infinity', 'pyobvector', 'opensearchpy', 'azure', 'qdrant_client', 'pymilvus', 'tidb_vector', 'minio', 'boto3', 'botocore', 'opendal', 'valkey', 'quart_schema', 'quart_cors', 'quart_auth', 'langfuse']:
+        for prefix in ['filelock', 'infinity', 'pyobvector', 'opensearchpy', 'azure', 'qdrant_client', 'pymilvus', 'tidb_vector', 'minio', 'boto3', 'botocore', 'opendal', 'valkey', 'quart_schema', 'quart_cors', 'quart_auth', 'langfuse']:
             if fullname == prefix or fullname.startswith(prefix + '.'):
                 return ModuleSpec(fullname, cls)
         return None
