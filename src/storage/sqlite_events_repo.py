@@ -11,20 +11,35 @@ from typing import List, Optional
 from ..models.events import RawTrafficEventDTO
 
 
+class _ConnContext:
+    def __init__(self, db_path: str):
+        self.conn = sqlite3.connect(db_path, timeout=5.0)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL;")
+        self.conn.execute("PRAGMA synchronous=NORMAL;")
+        self.conn.execute("PRAGMA busy_timeout=5000;")
+
+    def __enter__(self) -> sqlite3.Connection:
+        return self.conn
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if exc_type is None:
+                self.conn.commit()
+            else:
+                self.conn.rollback()
+        finally:
+            self.conn.close()
+
+
 class SQLiteEventsRepo:
     def __init__(self, db_path: str = "./data/attribution_events.db"):
         self.db_path = db_path
         os.makedirs(os.path.dirname(os.path.abspath(self.db_path)), exist_ok=True)
         self.init_schema()
 
-    def get_connection(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.db_path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        # Enforce WAL mode and concurrency pragmas
-        conn.execute("PRAGMA journal_mode=WAL;")
-        conn.execute("PRAGMA synchronous=NORMAL;")
-        conn.execute("PRAGMA busy_timeout=5000;")
-        return conn
+    def get_connection(self):
+        return _ConnContext(self.db_path)
 
     def init_schema(self):
         migration_file = os.path.join(
