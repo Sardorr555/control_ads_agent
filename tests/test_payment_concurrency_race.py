@@ -21,7 +21,9 @@ import re
 from datetime import datetime
 from peewee import SqliteDatabase, CharField, IntegerField, BigIntegerField, BooleanField, DateTimeField, TextField, JSONField
 
-sys.path.insert(0, "D:/ragflow/swipies_25/ragflow")
+for _candidate_path in ["/home/ubuntu/swipies__ai_", "D:/ragflow/swipies_25/ragflow"]:
+    if os.path.isdir(_candidate_path) and _candidate_path not in sys.path:
+        sys.path.insert(0, _candidate_path)
 
 import types
 from importlib.machinery import ModuleSpec
