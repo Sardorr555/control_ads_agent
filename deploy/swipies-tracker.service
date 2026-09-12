@@ -31,6 +31,7 @@ KillMode=control-group
 # Sandboxing
 ProtectSystem=full
 ProtectHome=read-only
+ReadWritePaths=/var/www/swipies/ads_agent/data "/home/ubuntu/ads agent/data"
 PrivateTmp=true
 
 [Install]
