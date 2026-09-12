@@ -23,11 +23,6 @@ import csv
 from datetime import datetime, date, timezone
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
 import typer
 from tabulate import tabulate
 

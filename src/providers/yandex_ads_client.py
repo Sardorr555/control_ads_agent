@@ -30,14 +30,8 @@ class YandexAdsClient:
         client_login: Optional[str] = None,
         use_sandbox: Optional[bool] = None,
     ):
-        try:
-            from dotenv import load_dotenv
-            load_dotenv()
-        except ImportError:
-            pass
-
-        self.token = token or os.environ.get("YANDEX_DIRECT_TOKEN", "").strip()
-        self.client_login = client_login or os.environ.get("YANDEX_DIRECT_CLIENT_LOGIN", "").strip()
+        self.token = token if token is not None else os.environ.get("YANDEX_DIRECT_TOKEN", "").strip()
+        self.client_login = client_login if client_login is not None else os.environ.get("YANDEX_DIRECT_CLIENT_LOGIN", "").strip()
         env_sandbox = os.environ.get("YANDEX_DIRECT_USE_SANDBOX", "false").lower() in ("true", "1")
         self.use_sandbox = use_sandbox if use_sandbox is not None else env_sandbox
 
